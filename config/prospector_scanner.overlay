@@ -8,11 +8,6 @@
 #include <dt-bindings/i2c/i2c.h>
 #include <physical_layouts.dtsi>
 
-/ {
-   chosen {
-      zephyr,display = &st7789v;
-  };
-};
 
 &i2c0 {
    status = "okay";
@@ -157,9 +152,9 @@ disp_spi: &spi3 {
         cmd-data-gpios = <&xiao_d 7 GPIO_ACTIVE_LOW>;
         reset-gpios = <&xiao_d 3 GPIO_ACTIVE_LOW>;
         width = <240>;
-        height = <240>; //280
+        height = <280>;
         x-offset = <0>;
-        y-offset = <0>;
+        y-offset = <40>;
         vcom = <0x19>;
         gctrl = <0x35>;
         vrhs = <0x12>;
