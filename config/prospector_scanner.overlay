@@ -152,7 +152,7 @@ disp_spi: &spi3 {
 
     st7789v: st7789v@0 {
         compatible = "sitronix,st7789v";
-        spi-max-frequency = <12000000>; //31000000
+        spi-max-frequency = <2000000>; //31000000
         reg = <0>;
         cmd-data-gpios = <&xiao_d 7 GPIO_ACTIVE_LOW>;
         reset-gpios = <&xiao_d 3 GPIO_ACTIVE_LOW>;
