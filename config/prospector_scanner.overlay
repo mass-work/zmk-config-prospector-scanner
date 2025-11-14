@@ -1,24 +1,42 @@
 / {
-   chosen {
-      zephyr,display = &st7789v;
-  };
+    chosen {
+        zephyr,display = &gc9a01a;
+    };
 };
 
 &i2c0 {
-   status = "okay";
+    status = "okay";
     touch_sensor: cst816s@15 {
         compatible = "hynitron,cst816s";
         reg = <0x15>;
         status = "okay";
-        irq-gpios = <&gpio0 2 GPIO_ACTIVE_LOW>;   // D0 = P0.02
-        rst-gpios = <&gpio0 3 GPIO_ACTIVE_LOW>;   // D1 = P0.03
+        irq-gpios = <&gpio0 2 GPIO_ACTIVE_LOW>;
+        rst-gpios = <&gpio0 3 GPIO_ACTIVE_LOW>;
     };
 };
 
-/ {
+ / {
     touch_listener: touch_listener {
         status = "okay";
         compatible = "zmk,input-listener";
         device = <&touch_sensor>;
+    };
+};
+
+&spi3 {
+    gc9a01a: gc9a01a@0 {
+        compatible = "sitronix,st7789v";   // ← ハック
+        reg = <0>;
+        spi-max-frequency = <31000000>;
+
+        cs-gpios       = <&xiao_d 9 GPIO_ACTIVE_LOW>;
+        cmd-data-gpios = <&xiao_d 7 GPIO_ACTIVE_LOW>;
+        reset-gpios    = <&xiao_d 3 GPIO_ACTIVE_LOW>;
+
+        width  = <240>;
+        height = <240>;
+
+        x-offset = <0>;
+        y-offset = <20>;
     };
 };
