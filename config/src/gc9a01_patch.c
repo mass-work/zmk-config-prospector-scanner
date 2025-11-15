@@ -45,7 +45,7 @@ static int lcd_send_data8(uint8_t data) {
 }
 
 static int lcd_send_data16(uint16_t data) {
-    uint8_t buf[2] = { data >> 8, data & 0xFF };
+    uint8_t buf[2] = { data & 0xFF, data >> 8 };
     int ret = gpio_pin_set_dt(&lcd_dc, 1);
     if (ret) return ret;
     return lcd_write_bytes(buf, 2);
@@ -89,7 +89,12 @@ static int gc9a01_patch_init(const struct device *dev) {
 
     k_msleep(500);
 
-    gc9a01_fill_color(0xF800);
+    lcd_send_cmd(0x3A);
+    lcd_send_data8(0x05);
+    lcd_send_cmd(0x36);
+    lcd_send_data8(0x08);
+
+    gc9a01_fill_color(0xFFFF);
 
     return 0;
 }
