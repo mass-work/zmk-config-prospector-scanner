@@ -1,3 +1,5 @@
+// config/src/gc9a01_patch.c
+
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/spi.h>
@@ -38,63 +40,75 @@ static int lcd_send_cmd(uint8_t cmd) {
     return lcd_write_bytes(&cmd, 1);
 }
 
-static int lcd_send_data8(uint8_t data) {
+static int lcd_send_data(const uint8_t *buf, size_t len) {
     int ret = gpio_pin_set_dt(&lcd_dc, 1);
     if (ret) return ret;
-    return lcd_write_bytes(&data, 1);
-}
-
-static int lcd_send_data16(uint16_t data) {
-    uint8_t buf[2] = { data & 0xFF, data >> 8 };
-    int ret = gpio_pin_set_dt(&lcd_dc, 1);
-    if (ret) return ret;
-    return lcd_write_bytes(buf, 2);
+    return lcd_write_bytes(buf, len);
 }
 
 static int gc9a01_fill_color(uint16_t color) {
-    int ret = 0;
     const uint16_t WIDTH  = 240;
     const uint16_t HEIGHT = 240;
+    int ret = 0;
 
     ret |= lcd_send_cmd(0x2A);
-    ret |= lcd_send_data8(0x00);
-    ret |= lcd_send_data8(0x00);
-    ret |= lcd_send_data8(0x00);
-    ret |= lcd_send_data8(WIDTH - 1);
+    uint8_t col_param[4] = {
+        0x00, 0x00,
+        (uint8_t)((WIDTH - 1) >> 8),
+        (uint8_t)((WIDTH - 1) & 0xFF),
+    };
+    ret |= lcd_send_data(col_param, sizeof(col_param));
 
     ret |= lcd_send_cmd(0x2B);
-    ret |= lcd_send_data8(0x00);
-    ret |= lcd_send_data8(0x00);
-    ret |= lcd_send_data8(0x00);
-    ret |= lcd_send_data8(HEIGHT - 1);
+    uint8_t row_param[4] = {
+        0x00, 0x00,
+        (uint8_t)((HEIGHT - 1) >> 8),
+        (uint8_t)((HEIGHT - 1) & 0xFF),
+    };
+    ret |= lcd_send_data(row_param, sizeof(row_param));
 
     ret |= lcd_send_cmd(0x2C);
-
     if (ret) return ret;
 
-    for (uint32_t i = 0; i < (uint32_t)WIDTH * HEIGHT; i++) {
-        ret = lcd_send_data16(color);
+    static uint16_t line[240];
+    uint8_t *line_bytes = (uint8_t *)line;
+
+    for (int x = 0; x < WIDTH; x++) {
+        line[x] = color;
+    }
+
+    for (int y = 0; y < HEIGHT; y++) {
+        ret = lcd_send_data(line_bytes, WIDTH * 2);
         if (ret) return ret;
     }
+
     return 0;
 }
 
 static int gc9a01_patch_init(const struct device *dev) {
     ARG_UNUSED(dev);
 
-    if (!device_is_ready(lcd_spi.bus)) return 0;
-    if (!device_is_ready(lcd_dc.port)) return 0;
+    printk("GC9A01 patch: init start (line-buffer fill)\n");
+
+    if (!device_is_ready(lcd_spi.bus)) {
+        printk("GC9A01 patch: SPI bus not ready\n");
+        return 0;
+    }
+    if (!device_is_ready(lcd_dc.port)) {
+        printk("GC9A01 patch: DC GPIO not ready\n");
+        return 0;
+    }
 
     gpio_pin_configure_dt(&lcd_dc, GPIO_OUTPUT_ACTIVE);
 
     k_msleep(500);
 
-    lcd_send_cmd(0x3A);
-    lcd_send_data8(0x05);
-    lcd_send_cmd(0x36);
-    lcd_send_data8(0x08);
-
-    gc9a01_fill_color(0xFFFF);
+    int ret = gc9a01_fill_color(0xF800);
+    if (ret) {
+        printk("GC9A01 patch: fill error %d\n", ret);
+    } else {
+        printk("GC9A01 patch: fill OK\n");
+    }
 
     return 0;
 }
